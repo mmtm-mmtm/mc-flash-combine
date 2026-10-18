@@ -1,0 +1,22 @@
+{
+  "required": true,
+  "package": "com.example.client.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "client": [
+    "BridgeRenderMixin",
+    "SteveSkinMixin",
+    "BridgeGuiAccess",
+    "InventoryModifiersMixin",
+    "InventoryPointerMixin",
+    "InventoryKeysMixin",
+    "NativeAudioMixin",
+    "NativeAudioChannelMixin",
+    "BridgeMiningAccess",
+    "BridgeMiningInputMixin",
+    "BridgeUseInputMixin",
+    "ClientUseRayMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

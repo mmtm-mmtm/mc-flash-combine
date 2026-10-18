@@ -1,0 +1,68 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>MC 入侵狂扁小朋友</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#11151c;color:#e8edf4;font:15px system-ui}main{width:960px;max-width:100%;padding:20px;margin:auto}h1{font-size:25px;margin:0 0 16px}#stage{position:relative;width:640px;height:480px;background:#000;overflow:hidden;outline:none}#flash,ruffle-player{width:640px;height:480px}#scene,#fx,#inventory{position:absolute;inset:0;width:640px;height:480px;pointer-events:none}#scene{z-index:2}#steve{position:absolute;width:184.8px;height:184.8px;pointer-events:none;z-index:3;display:none}#fx{z-index:4}#inventory{z-index:5;display:none}#hudWrap{width:640px;height:100px;background:#202630;display:flex;justify-content:center}#hud{width:294px;height:102px;object-fit:contain;image-rendering:pixelated}#status{width:640px;padding:12px;background:#252e3c;white-space:pre-wrap}#toolbar{display:flex;gap:8px;flex-wrap:wrap;width:640px;margin:12px 0}button{border:1px solid #47566b;border-radius:6px;background:#253449;color:white;padding:9px 15px;cursor:pointer}button:hover{background:#344e70}p{max-width:640px;line-height:1.7;color:#aebed2}b{color:#e7eef9}#badge{position:absolute;top:8px;right:10px;z-index:6;border-radius:4px;background:#101820b8;padding:6px 9px;font-size:12px;color:#c5e7ff}</style>
+<style>main{width:1000px}#stage,#flash,ruffle-player,#scene,#fx,#inventory{width:960px;height:540px}#inventory{object-fit:contain}#hudWrap,#status,#toolbar,p{width:960px;max-width:960px}button:disabled{opacity:.6;cursor:default}</style>
+<main><h1>MC 入侵狂扁小朋友</h1><div id="stage" tabindex="0"><div id="flash"></div><img id="scene"><img id="steve"><canvas id="fx" width="960" height="540"></canvas><img id="inventory" alt="Minecraft 原生背包"><div id="badge">双引擎 · 本地原型</div></div><div id="hudWrap"><img id="hud" alt="Minecraft 原生血条与快捷栏"></div><div id="status">正在加载原版游戏…</div><div id="toolbar"><button id="start">进入街道 / 连接 MC</button><button id="inventoryBtn">E · 原版创造背包</button><button id="reset">重新开始</button></div><p><b>方向键 / WASD</b> 在街道移动，<b>Ctrl + 方向键 / 双击方向键</b> 疾跑，<b>空格</b> 跳跃，<b>Shift</b> 潜行。<b>1–9 / 点击快捷栏</b> 切换物品，<b>右键</b> 使用物品 / 按住格挡，<b>左键</b> 砍敌人 / 按住挖方块，<b>F</b> 按住举盾。<b>E</b> 打开原生背包取物。原敌人、卷屏与关卡流程仍由 Flash 运行。</p></main>
+<script>
+window.RufflePlayer={config:{autoplay:'on',allowScriptAccess:true,unmuteOverlay:'hidden',logLevel:'error',contextMenu:'off'}};
+window.addEventListener('contextmenu',e=>{if(e.composedPath().includes(document.querySelector('#stage'))){e.preventDefault();e.stopImmediatePropagation();}},true);
+</script><script src="ruffle/ruffle.js"></script><script>
+const VIEW_W=960,VIEW_H=540;
+const base='http://127.0.0.1:18126',status=document.querySelector('#status'),stage=document.querySelector('#stage'),partner={left:false,right:false,jump:false};
+let player,enabled=false,mcState=null,flashState=null,busy=false,startRequestedAt=0,resetting=false,stateEpoch=0;
+window.addEventListener('load',async()=>{player=window.RufflePlayer.newest().createPlayer();document.querySelector('#flash').append(player);await player.ruffle().load({url:'bridge.swf',allowScriptAccess:true});status.textContent='点击「进入街道 / 连接 MC」开始。';if(sessionStorage.getItem('mcReplayStart')||new URLSearchParams(location.search).get('autostart')==='1'){sessionStorage.removeItem('mcReplayStart');setTimeout(()=>{enabled=true;startFlash();stage.focus();},1500);}});
+function sendAction(a){if(enabled&&!resetting)return fetch(base+'/action',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...a,scene:flashState?.scene??mcState?.scene})}).catch(()=>{});}
+function startFlash(){if(Date.now()-startRequestedAt<5000)return;try{if(player.ruffle().callExternalInterface('mcStart'))startRequestedAt=Date.now();}catch{}}
+document.querySelector('#start').onclick=()=>{enabled=true;startFlash();stage.focus();};
+document.querySelector('#reset').onclick=async()=>{
+ if(resetting)return;resetting=true;stateEpoch++;enabled=true;
+ const button=document.querySelector('#reset');button.disabled=true;status.textContent='正在重置 Minecraft 玩家、方块和生物…';
+ resetMotion();updateNativeAudio({scene:'reset:'+stateEpoch,won:true});
+ document.querySelector('#inventory').style.display='none';document.querySelector('#fx').getContext('2d').clearRect(0,0,VIEW_W,VIEW_H);
+ try{
+  const response=await fetch(base+'/reset',{method:'POST'});if(!response.ok)throw Error('MC 重置失败（'+response.status+'）');
+  const receipt=await response.json();stage.dataset.resetId=receipt.resetId;
+  sessionStorage.setItem('mcReplayStart','1');location.reload();
+ }catch(error){status.textContent='重新开始未完成：'+error.message;}
+ finally{resetting=false;button.disabled=false;stage.focus();}
+};
+const tap=key=>{sendAction({type:'key',key,down:true});sendAction({type:'key',key,down:false});};
+async function jumpBossStage(){
+ if(!enabled||resetting||!mcState?.ready||mcState.inventoryOpen)return;
+ await sendAction({type:'release'});stateEpoch++;
+ if(player.ruffle().callExternalInterface('mcBossStage')){resetMotion();mcState=null;flashState=player.ruffle().callExternalInterface('mcState');status.textContent='正在传送到最终 Boss 关…';stage.focus();}
+}
+const bossStageButton=document.createElement('button');bossStageButton.id='boss-stage';bossStageButton.textContent='F8 · 最终 Boss 关';bossStageButton.onclick=jumpBossStage;document.querySelector('#toolbar').append(bossStageButton);
+async function jumpNextStage(){
+ if(!enabled||resetting||!mcState?.ready||mcState.inventoryOpen)return;
+ if(mcState.checkpoint>=10){status.textContent='已经到达最终 Boss 关。';return;}
+ await sendAction({type:'release'});stateEpoch++;
+ if(player.ruffle().callExternalInterface('mcNextStage')){resetMotion();mcState=null;flashState=player.ruffle().callExternalInterface('mcState');status.textContent='正在进入下一关…';stage.focus();}
+}
+const nextStageButton=document.createElement('button');nextStageButton.id='next-stage';nextStageButton.textContent='F7 · 下一关';nextStageButton.onclick=jumpNextStage;bossStageButton.before(nextStageButton);
+document.querySelector('#inventoryBtn').onclick=()=>tap('KeyE');
+const alliesButton=document.createElement('button');alliesButton.textContent='MC 怪物加入我方';alliesButton.id='allies';document.querySelector('#toolbar').append(alliesButton);alliesButton.onclick=()=>{sendAction({type:'alliedMobs'});stage.focus();};
+const bossButtons=[];for(const [boss,label] of [['dragon','召唤末影龙'],['wither','召唤凋零']]){const button=document.createElement('button');button.id='summon-'+boss;button.textContent=label;button.disabled=true;button.onclick=()=>{if(!mcState?.ready||resetting)return;button.dataset.busyUntil=String(Date.now()+1200);button.disabled=true;sendAction({type:'summonBoss',boss});stage.focus();};document.querySelector('#toolbar').append(button);bossButtons.push(button);}
+setInterval(async()=>{if(!player||!enabled||busy||resetting)return;busy=true;const epoch=stateEpoch;try{
+ flashState=player.ruffle().callExternalInterface('mcState');
+ if(!flashState?.ready){startFlash();status.textContent='原版游戏正在进入街道…';return;}
+ const r=await fetch(base+'/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(flashState)});const next=await r.json();if(epoch!==stateEpoch||resetting)return;mcState=next;
+ if(!mcState.ready||String(mcState.scene)!==String(flashState.scene)){status.textContent=mcState.reason||'正在建立街道碰撞与敌人代理…';return;}
+ if((mcState.travelAck||0)<(flashState.travel||0)){status.textContent='正在同步最终 Boss 关位置…';return;}
+ player.ruffle().callExternalInterface('mcApply',mcState);
+ sampleMotion(mcState);nativeImage('steve','sprite',mcState.spriteFrame);
+ nativeImage('scene','scene',mcState.sceneFrame,{x:mcState.sceneCameraX,y:mcState.sceneCameraY});nativeImage('hud','hud',Math.floor(Date.now()/100));
+ updateInventory(mcState);updateNativeAudio(mcState);drawBlasts(mcState.blasts||[]);alliesButton.textContent=mcState.alliedMobs?'MC 怪物已加入我方':'MC 怪物加入我方';alliesButton.disabled=Boolean(mcState.alliedMobs);for(const button of bossButtons)button.disabled=Date.now()<Number(button.dataset.busyUntil||0);
+ status.textContent=`真实 MC 已连接 | 生命 ${mcState.hp.toFixed(1)} / 20${mcState.blocking?' | 正在举盾':''}${mcState.sprinting?' | 正在疾跑':''}\n方块 ${mcState.blocks.length} | 敌人 ${mcState.nativeEnemies}`;
+ stage.dataset.hp=mcState.hp;stage.dataset.blocks=mcState.blocks.length;stage.dataset.scene=mcState.scene;stage.dataset.sprinting=String(Boolean(mcState.sprinting));
+}catch(e){status.textContent='等待 Minecraft 桥接端：'+e.message;}finally{busy=false;}},50);
+function drawBlasts(blasts){const c=document.querySelector('#fx').getContext('2d');c.clearRect(0,0,VIEW_W,VIEW_H);for(const b of blasts){const age=b.age/15,x=b.x+flashState.cameraX,y=b.y+flashState.cameraY-25;c.globalAlpha=1-age;c.fillStyle='#ffdd6d';c.beginPath();c.ellipse(x,y,20+age*85,15+age*55,0,0,Math.PI*2);c.fill();c.lineWidth=5;c.strokeStyle='#ff6a22';c.stroke();c.globalAlpha=1;}}
+</script><script src="motion.js"></script><script src="inventory.js"></script><script src="audio.js"></script><script>
+const controlKeys=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','KeyA','KeyD','KeyW','KeyS','Space','ShiftLeft','ShiftRight','ControlLeft','ControlRight','KeyE','KeyF'];
+window.addEventListener('keydown',e=>{if(!enabled||mcState?.inventoryOpen||e.target.closest?.('input,textarea'))return;if(e.code==='F7'||e.code==='F8'){e.preventDefault();e.stopImmediatePropagation();if(!e.repeat){if(e.code==='F7')jumpNextStage();else jumpBossStage();}return;}if(controlKeys.includes(e.code)||/^Digit[1-9]$/.test(e.code)){e.preventDefault();e.stopImmediatePropagation();if(e.repeat)return;if(e.code==='KeyF')sendAction({type:'shield',down:true});else sendAction({type:'key',key:e.code,down:true});}},true);
+window.addEventListener('keyup',e=>{if(!enabled||mcState?.inventoryOpen)return;e.preventDefault();e.stopPropagation();if(e.code==='KeyF')sendAction({type:'shield',down:false});else sendAction({type:'key',key:e.code,down:false});},true);
+window.addEventListener('blur',()=>sendAction({type:'release'}));
+stage.addEventListener('pointerdown',e=>{if(!enabled||mcState?.inventoryOpen||!flashState?.ready||![0,2].includes(e.button))return;e.preventDefault();e.stopImmediatePropagation();stage.focus();const r=stage.getBoundingClientRect(),camera=viewState||flashState;let x=(e.clientX-r.left)*VIEW_W/r.width-camera.cameraX,y=(e.clientY-r.top)*VIEW_H/r.height-camera.cameraY;sendAction({type:'click',button:e.button,x,y});},true);
+window.addEventListener('pointerup',e=>{if(!mcState?.inventoryOpen)sendAction({type:'mouseUp',button:e.button});},true);
+stage.addEventListener('pointermove',e=>{if(!enabled||mcState?.inventoryOpen||!(e.buttons&2)||!flashState?.ready)return;const r=stage.getBoundingClientRect(),c=viewState||flashState;sendAction({type:'aim',x:(e.clientX-r.left)*VIEW_W/r.width-c.cameraX,y:(e.clientY-r.top)*VIEW_H/r.height-c.cameraY});},true);
+const hudImage=document.querySelector('#hud');hudImage.draggable=false;hudImage.addEventListener('pointerdown',e=>{if(!enabled||mcState?.inventoryOpen||e.button!==0)return;const r=hudImage.getBoundingClientRect(),x=(e.clientX-r.left)*184/r.width,y=(e.clientY-r.top)*64/r.height;if(y<42||x<1||x>=183)return;e.preventDefault();tap('Digit'+Math.min(9,Math.floor((x-1)/20)+1));stage.focus();});stage.addEventListener('contextmenu',e=>e.preventDefault(),true);
+</script></html>

@@ -1,0 +1,20 @@
+# Generated dependency caches and runtime data
+**/.gradle/
+**/build/
+**/run/
+**/__pycache__/
+*.pyc
+*.log
+*.lock
+.env
+.env.*
+!.env.example
+.idea/
+.vscode/
+# User imports and generated Flash artifacts
+original/*.swf
+web/bridge.swf
+web/ruffle/
+decompiled/
+patched-scripts/
+# Preserve the Gradle bootstrap JAR, not Minecraft binaries

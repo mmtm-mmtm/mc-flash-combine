@@ -1,0 +1,7 @@
+{
+  "required":true,
+  "package":"com.example.mixin",
+  "compatibilityLevel":"JAVA_17",
+  "mixins":["DynamicCollisionMixin","ContainmentExplosionMixin","ItemUseRayMixin","ServerUseRayMixin","BridgeMovementFrameMixin","ReplaySpawnMixin","ReplayChunksAccess","AllianceTargetMixin","AllianceDamageMixin","StreetCombatMixin"],
+  "injectors":{"defaultRequire":1}
+}

@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "mcflash",
+  "version": "${version}",
+  "name": "Dad n Me Bridge Example",
+  "description": "Local Minecraft and Dad n Me dual-engine bridge example",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.example.client.ExampleModClient"
+    ],
+    "main": [
+      "com.example.BridgeEntities"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.14",
+    "minecraft": "1.20.1",
+    "java": ">=17",
+    "fabric-api": "*"
+  },
+  "mixins": [
+    {
+      "config": "mcflash.client.mixins.json",
+      "environment": "client"
+    },
+    "mcflash.dynamic.mixins.json"
+  ]
+}

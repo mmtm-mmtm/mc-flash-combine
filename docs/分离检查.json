@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-18T15:30:22",
+  "sourceComplete": true,
+  "javaFiles": 46,
+  "javaSourcesMatchOriginal": true,
+  "pythonSyntax": "passed (5 files)",
+  "prepareOnly": "passed",
+  "swfImportAndRebuild": "passed in external temporary copy",
+  "swfVersion": 8,
+  "swfStage": [
+    960,
+    540
+  ],
+  "bridgeCallbacksPresent": true,
+  "gradleClientClasses": "BUILD SUCCESSFUL",
+  "compileEnvironment": "Java 17, Gradle 8.6; existing local dependency cache, offline compilation",
+  "freshMachineOnlineInstallTested": false,
+  "gameplayRetested": false,
+  "minecraftLaunched": false,
+  "browserLaunched": false,
+  "desktopControlled": false,
+  "originalProjectPreserved": true,
+  "bundledOriginalSWF": false,
+  "bundledMinecraftJars": false,
+  "bundledRuffle": false
+}
